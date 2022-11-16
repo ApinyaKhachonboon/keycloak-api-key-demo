@@ -1,6 +1,7 @@
 package com.gwidgets.providers;
 
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
 import javax.persistence.EntityManager;
@@ -13,7 +14,6 @@ import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.events.admin.OperationType;
 import org.keycloak.events.admin.ResourceType;
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
 import org.keycloak.models.RealmProvider;
 import org.keycloak.models.jpa.entities.UserAttributeEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
@@ -34,12 +34,17 @@ public class RegisterEventListenerProvider implements EventListenerProvider  {
     }
 
     public void onEvent(Event event) {
+        System.out.println(event.getType());
         //we are only interested in the register event
         if (event.getType().equals(EventType.REGISTER)) {
-            RealmModel realm = model.getRealm(event.getRealmId());
             String userId = event.getUserId();
             addApiKeyAttribute(userId);
         }
+        // logout event
+        // if (event.getType().equals(EventType.LOGOUT)) {
+        //     String userId = event.getUserId();
+        //     updateApiKeyAttribute(userId);
+        // }
     }
 
     public void onEvent(AdminEvent adminEvent, boolean includeRepresentation) {
@@ -63,6 +68,28 @@ public class RegisterEventListenerProvider implements EventListenerProvider  {
         attributeEntity.setUser(userEntity);
         attributeEntity.setId(UUID.randomUUID().toString());
         entityManager.persist(attributeEntity);
+    }
+
+    public void updateApiKeyAttribute(String userId) {
+        String apiKey = secretGenerator.randomString(50);
+        UserEntity userEntity = entityManager.find(UserEntity.class, userId);
+        if(findAttributeByName(userEntity.getAttributes(), "api-key") == null) {
+            System.out.println("can't find attr!!!");
+            return;
+        }
+        UserAttributeEntity attributeEntity = findAttributeByName(userEntity.getAttributes(), "api-key");
+        attributeEntity.setValue(apiKey);
+        entityManager.persist(attributeEntity);
+    }
+
+    protected UserAttributeEntity findAttributeByName(Collection<UserAttributeEntity> attrList, String searchAttrName) {
+        for (UserAttributeEntity  attr: attrList) {
+            if(attr.getName().equals(searchAttrName)) {
+                return attr;
+            }
+        }
+
+        return null;
     }
 
     @Override

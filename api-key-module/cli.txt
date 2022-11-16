@@ -1,0 +1,8 @@
+step01
+mvn clean install
+
+step02
+docker cp target/original-api-key-module-0.1.jar keycloak:/opt/keycloak/providers
+
+step03
+/opt/keycloak/bin/kc.sh build
